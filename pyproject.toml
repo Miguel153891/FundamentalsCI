@@ -1,0 +1,13 @@
+[project]
+name = "lab0"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "black>=26.10.1",
+    "click>=8.5.1",
+    "pylint>=4.1.3",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+]

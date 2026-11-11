@@ -1,3 +1,4 @@
+"""Functions for cleaning and preprocessing data."""
 
 import math
 import random
@@ -5,58 +6,63 @@ import re
 from typing import Any
 
 
-
 # Cleaning functions
+def _is_missing(value: Any) -> bool:
+    """Check if a value is missing (if it's None, '', nan, etc.)"""
+    if value is None:
+        return True
+
+    if isinstance(value, str) and value.strip().lower() in ("", "nan"):
+        return True
+
+    if isinstance(value, (int, float)) and math.isnan(value):
+        return True
+
+    return False
+
 
 def remove_missing(values: list[Any]) -> list[Any]:
-    """Remove None, empty strings and NaN values."""
+    """Remove missing values from a list."""
     result = []
 
     for value in values:
-        is_missing = (
-            value is None
-            or (isinstance(value, str) and value.strip().lower() in ("", "nan"))
-            or (
-                isinstance(value, (int, float))
-                and math.isnan(value)
-            )
-        )
-
-        if not is_missing:
+        if not _is_missing(value):
             result.append(value)
 
     return result
 
 
-def fill_missing(
-    values: list[Any], fill_value: Any = 0
-) -> list[Any]:
+def fill_missing(values: list[Any], fill_value: Any = 0) -> list[Any]:
     """Replace missing values with a specified value."""
-    return [
-        fill_value if value is None
-        or (isinstance(value, str) and value.strip().lower() in ("", "nan"))
-        or (
-            isinstance(value, (int, float))
-            and math.isnan(value)
-        )
-        else value
-        for value in values
-    ]
+    result = []
+
+    for value in values:
+        if _is_missing(value):
+            result.append(fill_value)
+        else:
+            result.append(value)
+
+    return result
 
 
 def remove_duplicates(values: list[Any]) -> list[Any]:
     """Remove duplicated values while preserving order."""
-    return list(dict.fromkeys(values))
+    result = []
+
+    for value in values:
+        if value not in result:
+            result.append(value)
+
+    return result
 
 
 # Numeric functions
 
+
 def normalize(
-    values: list[float],
-    new_min: float = 0.0,
-    new_max: float = 1.0,
+    values: list[float], new_min: float = 0.0, new_max: float = 1.0
 ) -> list[float]:
-    """Normalize numerical values using min-max scaling."""
+    """Normalize values using min-max scaling."""
     if not values:
         return []
 
@@ -66,48 +72,64 @@ def normalize(
     old_min = min(values)
     old_max = max(values)
 
-    if old_min == old_max:
-        return [new_min for _ in values]
+    if (
+        old_min == old_max
+    ):  # If oldmin and max are equal, the list is the same value repeated
+        return [new_min] * len(values)
 
-    return [
-        new_min + (value - old_min) * (new_max - new_min)
-        / (old_max - old_min)
-        for value in values
-    ]
+    result = []
+
+    for value in values:
+        normalized = new_min + (
+            (value - old_min) * (new_max - new_min) / (old_max - old_min)
+        )
+        result.append(normalized)
+
+    return result
 
 
 def standardize(values: list[float]) -> list[float]:
-    """Standardize numerical values using z-score."""
+    """Standardize values using z-score."""
     if not values:
         return []
 
     mean = sum(values) / len(values)
+
     variance = sum((value - mean) ** 2 for value in values) / len(values)
+
     std_dev = math.sqrt(variance)
 
     if std_dev == 0:
-        return [0.0 for _ in values]
+        return [0.0] * len(values)
 
-    return [(value - mean) / std_dev for value in values]
+    result = []
+
+    for value in values:
+        result.append((value - mean) / std_dev)
+
+    return result
 
 
-def clip(
-    values: list[float],
-    minimum: float,
-    maximum: float,
-) -> list[float]:
-    """Clip numerical values to a specified range."""
+def clip(values: list[float], minimum: float, maximum: float) -> list[float]:
+    """Clip values to a specified range."""
     if minimum > maximum:
         raise ValueError("minimum cannot exceed maximum")
 
-    return [
-        max(minimum, min(value, maximum))
-        for value in values
-    ]
+    result = []
+
+    for value in values:
+        if value < minimum:
+            result.append(minimum)
+        elif value > maximum:
+            result.append(maximum)
+        else:
+            result.append(value)
+
+    return result
 
 
 def convert_to_integers(values: list[str]) -> list[int]:
-    """Convert valid strings to integers, ignoring invalid values."""
+    """Convert valid values to integers."""
     result = []
 
     for value in values:
@@ -120,24 +142,33 @@ def convert_to_integers(values: list[str]) -> list[int]:
 
 
 def logarithmic(values: list[float]) -> list[float]:
-    """Apply natural logarithm to positive values only."""
-    return [math.log(value) for value in values if value > 0]
+    """Apply natural logarithm to positive values."""
+    result = []
+
+    for value in values:
+        if value > 0:
+            result.append(math.log(value))
+
+    return result
 
 
 # Text functions
 
 
 def tokenize(text: str) -> list[str]:
-    """Extract lowercase alphanumeric words from text."""
+    """Extract lowercase alphanumeric words."""
     return re.findall(r"[^\W_]+", text.lower())
 
 
 def remove_punctuation(text: str) -> str:
     """Keep only alphanumeric characters and spaces."""
-    return "".join(
-        character for character in text
-        if character.isalnum() or character.isspace()
-    )
+    result = ""
+
+    for character in text:
+        if character.isalnum() or character.isspace():
+            result += character
+
+    return result
 
 
 def remove_stopwords(text: str, stopwords: list[str]) -> str:
@@ -145,24 +176,32 @@ def remove_stopwords(text: str, stopwords: list[str]) -> str:
     words = text.lower().split()
     stopwords = [word.lower() for word in stopwords]
 
-    return " ".join(
-        word for word in words if word not in stopwords
-    )
+    result = []
+
+    for word in words:
+        if word not in stopwords:
+            result.append(word)
+
+    return " ".join(result)
 
 
 # Structure functions
 
+
 def flatten(values: list[list[Any]]) -> list[Any]:
-    """Flatten a list of lists into a single list."""
-    return [
-        item
-        for sublist in values
-        for item in sublist
-    ]
+    """Flatten a list of lists."""
+    result = []
+
+    for sublist in values:
+        for item in sublist:
+            result.append(item)
+
+    return result
 
 
 def shuffle(values: list[Any], seed: int | None = None) -> list[Any]:
     """Return a shuffled copy of a list."""
     result = values.copy()
     random.Random(seed).shuffle(result)
+
     return result
